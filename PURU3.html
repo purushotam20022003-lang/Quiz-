@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz App - Timer + Score</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .quiz-container { background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); max-width: 600px; width: 100%; overflow: hidden; }
+        .header { background: #4a5568; color: white; padding: 20px; text-align: center; }
+        .progress-bar { background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+        .progress { height: 100%; background: linear-gradient(90deg, #48bb78, #38a169); transition: width 0.3s ease; }
+        .timer { font-size: 1.2em; font-weight: bold; color: #f56565; }
+        .question-container { padding: 40px 30px; }
+        .question { font-size: 1.5em; margin-bottom: 25px; color: #2d3748; line-height: 1.4; }
+        .options { display: flex; flex-direction: column; gap: 12px; }
+        .option { padding: 15px 20px; border: 2px solid #e2e8f0; border-radius: 12px; background: white; cursor: pointer; font-size: 1.1em; transition: all 0.2s ease; }
+        .option:hover { border-color: #667eea; background: #f7fafc; transform: translateY(-2px); }
+        .option.correct { background: #c6f6d5; border-color: #38a169; }
+        .option.incorrect { background: #fed7d7; border-color: #e53e3e; }
+        .nav-buttons { display: flex; gap: 15px; justify-content: center; margin-top: 30px; }
+        .btn { padding: 12px 30px; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; transition: all 0.2s; font-weight: 600; }
+        .btn-primary { background: #4299e1; color: white; }
+        .btn-primary:hover { background: #3182ce; }
+        .btn-secondary { background: #a0aec0; color: white; }
+        .btn-secondary:hover { background: #718096; }
+        .result-screen { padding: 60px 40px; text-align: center; }
+        .score { font-size: 3em; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+        .high-score { background: #fed7d7; padding: 10px 20px; border-radius: 8px; margin: 20px 0; font-weight: bold; color: #c53030; }
+        .start-screen { padding: 60px 40px; text-align: center; }
+        .start-btn { padding: 20px 50px; font-size: 1.3em; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <!-- Start Screen -->
+        <div id="startScreen" class="start-screen">
+            <h1>🧠 Quiz Challenge</h1>
+            <p style="margin: 20px 0; color: #718096;">Test your knowledge with 8 challenging questions!</p>
+            <button class="btn btn-primary start-btn" onclick="startQuiz()">Start Quiz</button>
+        </div>
+
+        <!-- Quiz Header -->
+        <div id="quizHeader" class="header hidden">
+            <div class="progress-bar">
+                <div id="progressBar" class="progress"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>Question <span id="questionNum">1</span> / <span id="totalQuestions">8</span></div>
+                <div class="timer" id="timer">30s</div>
+            </div>
+        </div>
+
+        <!-- Question Screen -->
+        <div id="questionScreen" class="question-container hidden">
+            <div id="question" class="question"></div>
+            <div id="options" class="options"></div>
+            <div class="nav-buttons">
+                <button id="prevBtn" class="btn btn-secondary" onclick="previousQuestion()" style="visibility: hidden;">Previous</button>
+                <button id="nextBtn" class="btn btn-primary" onclick="nextQuestion()">Next</button>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="resultScreen" class="result-screen hidden">
+            <div class="score" id="finalScore">0</div>
+            <div id="highScore" class="high-score hidden">New High Score! 🎉</div>
+            <div style="font-size: 1.2em; margin: 20px 0; color: #4a5568;">Your Score: <span id="scoreDisplay">0</span> / 8</div>
+            <button class="btn btn-primary" onclick="restartQuiz()">Play Again</button>
+            <button class="btn btn-secondary" onclick="showHighScores()" style="margin-top: 15px;">View High Scores</button>
+        </div>
+
+        <!-- High Scores Screen -->
+        <div id="highScoresScreen" class="result-screen hidden">
+            <h2>🏆 High Scores</h2>
+            <div id="highScoresList" style="text-align: left; max-height: 300px; overflow-y: auto; margin: 20px 0;"></div>
+            <button class="btn btn-primary" onclick="backToStart()">Back to Start</button>
+        </div>
+    </div>
+
+    <script>
+        // Quiz data - Computer Science themed for your interests [web:11]
+        const quizData = [
+            {
+                question: "What does HTML stand for?",
+                options: ["HyperText Markup Language", "HighText Machine Language", "HyperText and Links Markup Language", "Home Tool Markup Language"],
+                correct: 0
+            },
+            {
+                question: "Which method adds an element to the end of an array?",
+                options: ["array.add()", "array.push()", "array.append()", "array.insert()"],
+                correct: 1
+            },
+            {
+                question: "What is the purpose of CSS?",
+                options: ["Add interactivity", "Style HTML elements", "Store data", "Create animations"],
+                correct: 1
+            },
+            {
+                question: "Which HTML tag is used for the largest heading?",
+                options: ["<head>", "<h1>", "<heading>", "<h6>"],
+                correct: 1
+            },
+            {
+                question: "JavaScript is a _____ language.",
+                options: ["Compiled", "Server-side", "Client-side scripting", "Markup"],
+                correct: 2
+            },
+            {
+                question: "What does JSON stand for?",
+                options: ["Java Object Notation", "JavaScript Object Notation", "JQuery Object Notation", "Java Standard Object Notation"],
+                correct: 1
+            },
+            {
+                question: "Which event occurs when the page has loaded?",
+                options: ["onload", "onready", "DOMContentLoaded", "pageLoad"],
+                correct: 0
+            },
+            {
+                question: "What is localStorage used for?",
+                options: ["Styling", "Storing data in browser", "Creating animations", "Sending HTTP requests"],
+                correct: 1
+            }
+        ];
+
+        // Game state
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timeLeft = 30;
+        let timerInterval;
+        let answers = new Array(quizData.length).fill(null); // Track user answers
+        let shuffledQuestions = [];
+
+        // Initialize quiz
+        function startQuiz() {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('quizHeader').classList.remove('hidden');
+            document.getElementById('questionScreen').classList.remove('hidden');
+            
+            // Randomize questions (Extra Challenge) [web:8]
+            shuffledQuestions = [...quizData].sort(() => Math.random() - 0.5);
+            currentQuestionIndex = 0;
+            score = 0;
+            answers = new Array(shuffledQuestions.length).fill(null);
+            
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const qData = shuffledQuestions[currentQuestionIndex];
+            document.getElementById('question').textContent = qData.question;
+            document.getElementById('questionNum').textContent = currentQuestionIndex + 1;
+            document.getElementById('totalQuestions').textContent = shuffledQuestions.length;
+            
+            // Update progress bar (Extra Challenge) [web:10][web:13]
+            const progress = ((currentQuestionIndex + 1) / shuffledQuestions.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            
+            // Create options
+            const optionsContainer = document.getElementById('options');
+            optionsContainer.innerHTML = '';
+            qData.options.forEach((option, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option';
+                btn.textContent = option;
+                btn.onclick = () => selectAnswer(index);
+                if (answers[currentQuestionIndex] === index) {
+                    btn.classList.add(answers[currentQuestionIndex] === qData.correct ? 'correct' : 'incorrect');
+                }
+                optionsContainer.appendChild(btn);
+            });
+            
+            // Navigation buttons
+            document.getElementById('prevBtn').style.visibility = currentQuestionIndex > 0 ? 'visible' : 'hidden';
+            document.getElementById('nextBtn').textContent = currentQuestionIndex === shuffledQuestions.length - 1 ? 'Finish' : 'Next';
+            
+            // Reset and start timer [web:9][web:11]
+            timeLeft = 30;
+            updateTimerDisplay();
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function selectAnswer(index) {
+            clearInterval(timerInterval);
+            answers[currentQuestionIndex] = index;
+            
+            // Visual feedback
+            const options = document.querySelectorAll('.option');
+            options.forEach((opt, i) => {
+                opt.onclick = null; // Disable further clicks
+                if (i === shuffledQuestions[currentQuestionIndex].correct) {
+                    opt.classList.add('correct');
+                } else if (i === index && index !== shuffledQuestions[currentQuestionIndex].correct) {
+                    opt.classList.add('incorrect');
+                }
+            });
+            
+            // Score calculation
+            if (index === shuffledQuestions[currentQuestionIndex].correct) {
+                score++;
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < shuffledQuestions.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        function previousQuestion() {
+            currentQuestionIndex--;
+            loadQuestion();
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            updateTimerDisplay();
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                nextQuestion();
+            }
+        }
+
+        function updateTimerDisplay() {
+            document.getElementById('timer').textContent = timeLeft + 's';
+        }
+
+        function endQuiz() {
+            clearInterval(timerInterval);
+            document.getElementById('questionScreen').classList.add('hidden');
+            document.getElementById('quizHeader').classList.add('hidden');
+            document.getElementById('resultScreen').classList.remove('hidden');
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('scoreDisplay').textContent = score;
+            
+            // Check high score (Extra Challenge) [web:8][web:14]
+            const highScore = localStorage.getItem('quizHighScore') || 0;
+            if (score > highScore) {
+                localStorage.setItem('quizHighScore', score);
+                document.getElementById('highScore').classList.remove('hidden');
+            }
+        }
+
+        function restartQuiz() {
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+
+        function showHighScores() {
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('highScoresScreen').classList.remove('hidden');
+            
+            const highScore = localStorage.getItem('quizHighScore') || 0;
+            document.getElementById('highScoresList').innerHTML = `
+                <div style="font-size: 1.5em; margin-bottom: 20px;">${highScore}/8</div>
+                <p style="color: #718096; font-style: italic;">Your best score so far!</p>
+            `;
+        }
+
+        function backToStart() {
+            document.getElementById('highScoresScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
